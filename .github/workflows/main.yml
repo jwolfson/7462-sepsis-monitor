@@ -1,0 +1,25 @@
+name: Update sepsis report
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+
+jobs:
+  update_report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v1
+        with:
+          r-version: '4.1.0'
+      - name: Install dependencies
+        run: |
+          Rscript -e 'install.packages("googledrive")'
+      - name: Update report
+        env:
+          GOOGLE_DRIVE_API_KEY: ${{ secrets.mvdks0g8ebitmie0kjdtmhapvicrfs6h }}
+          GOOGLE_DRIVE_REFRESH_TOKEN: ${{ secrets.1pnGGhgb0V9wHHiOArN_OIcWEcRXUvTaa }}
+        run: |
+          Rscript update_report.R
