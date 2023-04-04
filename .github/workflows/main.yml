@@ -22,4 +22,4 @@ jobs:
           GOOGLE_DRIVE_API_KEY: ${{ secrets.58930731896-mvdks0g8ebitmie0kjdtmhapvicrfs6h.apps.googleusercontent.com }}
           GOOGLE_DRIVE_REFRESH_TOKEN: ${{ secrets.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 }}
         run: |
-          Rscript update_report.R
+          Rscript A7_databases.R
