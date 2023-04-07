@@ -1,0 +1,73 @@
+---
+title: "Assignment 7 tasks"
+author: Courtney Broedlow
+date: 04.06.2023
+format: html
+editor: visual
+---
+
+# Task 1: set up
+
+```{r}
+#echo:FALSE
+library(tidyverse)
+library(data.table) ## For the fread function
+library(lubridate)
+
+source("sepsis_monitor_functions.R")
+```
+
+# Task 2: Speed reading
+
+```{r}
+#| eval: false
+library(tictoc)
+tic()
+makeSepsisDataset(n = 50, read_fn = "fread")
+toc() #5.844 sec 
+
+tic()
+makeSepsisDataset(n = 50, read_fn = "read_delim")
+toc() #20.266 sec
+
+tic()
+makeSepsisDataset(n = 100, read_fn = "fread")
+toc() #9.066 sec
+
+tic()
+makeSepsisDataset(n = 100, read_fn = "read_delim")
+toc() #42.927 sec
+
+tic()
+makeSepsisDataset(n = 500, read_fn = "fread")
+toc() #45.778 sec
+
+tic()
+makeSepsisDataset(n = 500, read_fn = "read_delim")
+toc() #203.774 sec
+
+read_delim_avg_time<-mean(20.266,42.927,203.774)
+fread_avg_time<-mean(5.844,9.066,45.778) 
+
+#Fread function is much faster than read_delim
+```
+
+# Task 3: Upload to Google Drive
+
+```{r}
+library(googledrive)
+
+df <- makeSepsisDataset()
+
+# We have to write the file to disk first, then upload it
+df %>% write_csv("sepsis_data_temp.csv")
+
+# Uploading happens here
+sepsis_file <- drive_put(media = "sepsis_data_temp.csv", 
+          path = "https://drive.google.com/drive/folders/1GmiCPqPFwOiTOL3la-eXts2_-EP2Gs0f",
+          name = "sepsis_data.csv")
+
+# Set the file permissions so anyone can download this file.
+sepsis_file %>% drive_share_anyone()
+
+```
