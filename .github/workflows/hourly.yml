@@ -38,6 +38,7 @@ jobs:
                any::tictoc
                any::plotly
                any::tidyverse
+ 
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
