@@ -38,7 +38,11 @@ jobs:
                any::tictoc
                any::plotly
                any::tidyverse
-               
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.Asg7 }}
+
       - name: Render document
         uses: quarto-dev/quarto-actions/render@v2
         with:
