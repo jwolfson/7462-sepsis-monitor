@@ -1,0 +1,131 @@
+---
+title: "Sepsis Monitoring Report"
+author: "Can Zhang"
+format: 
+  html:
+    embed-resources: true
+editor: visual
+---
+
+# Assignment 7
+
+### Date and Time: `r Sys.time()`
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+library(dplyr)
+library(tidyr)
+library(knitr)
+library(ggplot2)
+library(tidyverse)
+library(lubridate)
+library(data.table) 
+library(googledrive)
+source("sepsis_monitor_functions.R")
+```
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+drive_deauth()
+file_link <- "https://drive.google.com/file/d/1wCfQLLZB09Ezfdd3Uth_OGXPdmUPdoKu"
+
+new_data <- updateData(file_link)
+
+most_recent_data <- new_data %>%
+  group_by(PatientID) %>%
+  filter(obsTime == max(obsTime))
+```
+
+### Table 1: Most recent vital signs of patients with sepsis in the ICU
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(dplyr)
+library(knitr)
+
+sepsis_table <- most_recent_data %>%
+  filter(SepsisLabel == 1) %>%
+  select(PatientID, HR, Temp, Resp) %>%
+  rename("Patient ID" = PatientID,
+         "Heart Rate" = HR,
+         "Temperature" = Temp,
+         "Respiratory Rate" = Resp)
+
+kable(sepsis_table)
+```
+
+### Figure 1: Vitals signs for patients with sepsis while in the ICU
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(dplyr)
+library(ggplot2)
+library(plotly)
+
+septic_patients <- new_data %>% 
+  filter(SepsisLabel == 1) %>% 
+  distinct(PatientID) %>% 
+  pull(PatientID)
+
+plot_septic_patient_data <- function(data, variable, y_label, plot_title) {
+  data %>%
+    filter(PatientID %in% septic_patients) %>%
+    ggplot() +
+    geom_line(aes_string(x = "ICULOS", y = variable, group = "PatientID",
+                         color = "PatientID"), alpha = .5) +
+    labs(x = "Hours in ICU",
+         y = y_label,
+         color = "Patient ID",
+         title = plot_title)
+}
+
+plot1 <- plot_septic_patient_data(new_data, "HR", "Heart Rate", "Heart Rate Over Time for Septic Patients")
+plot2 <- plot_septic_patient_data(new_data, "Resp", "Respiratory Rate", "Respiratory Rate Over Time for Septic Patients")
+plot3 <- plot_septic_patient_data(new_data, "Temp", "Temperature", "Temperature Over Time for Septic Patients")
+
+plot1
+plot2
+plot3
+
+```
+
+### Table 2: Recent Change in Vital Signs
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(dplyr)
+library(tidyr)
+library(knitr)
+
+get_observation_data <- function(data, n, column_suffix) {
+  data %>%
+    group_by(PatientID) %>%
+    slice_max(order_by = obsTime, n = n) %>%
+    select(-c(ICULOS, SepsisLabel, obsTime)) %>%
+    rename_at(vars(HR, Temp, Resp),
+              list(~paste0(., "_", column_suffix)))
+}
+
+last_obs <- get_observation_data(new_data, 1, "last")
+penultimate_obs <- get_observation_data(new_data, 2, "penult")
+
+joined_data <- full_join(last_obs, penultimate_obs) %>%
+  transmute(PatientID,
+            `Temperature change` = Temp_last - Temp_penult,
+            `Heart rate change` = HR_last - HR_penult,
+            `Respiratory rate change` = Resp_last - Resp_penult)
+
+kable(joined_data, caption = "Patients' Recent Changes in Vital Stats")
+
+```
