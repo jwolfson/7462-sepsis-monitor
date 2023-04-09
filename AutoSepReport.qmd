@@ -1,0 +1,167 @@
+---
+title: "Up-to-date ICU status reports"
+author: "Gretchen North"
+format: html
+editor: visual
+---
+
+## Background Information
+
+Up-to-date patient information for 50 randomly-sampled patients in the ICU. Comparative statistics for patient physiological measures including heart rate (HR), temperature (Temp), and respiratory rate (Resp).
+
+### Report last updated:
+
+```{r}
+#| echo: false
+
+time <- Sys.time()
+```
+
+`r time`
+
+## Physio Measures for Sampled Sepsis Patients
+
+-   A table listing the patients who currently have sepsis (if any), along with their most recent heart rate, temperature, and respiratory rate
+
+    -   Note: If table is empty, this indicates that no patients from the most recent, randomly-sampled dataset are currently affected by sepsis.
+
+```{r}
+#| echo: false
+#| message: false
+
+# Loading libraries, sourcing monitoring fns
+
+    library(tidyverse)
+    library(data.table) ## For the fread function
+    library(lubridate)
+    library(readr)
+    library(knitr) # For table output in section 4
+    library(purrr)
+    library(plotly)
+    library(dplyr)
+    library(ggplot2)
+    library(googledrive)
+
+
+    
+    source("sepsis_monitor_functions.R")
+
+```
+
+```{r}
+#| echo: false
+#| message: false
+
+df <- makeSepsisDataset()
+
+# We have to write the file to disk first, then upload it
+df %>% write_csv("sepsis_data_temp.csv")
+
+folder_url <- "https://drive.google.com/drive/folders/1pnGGhgb0V9wHHiOArN_OIcWEcRXUvTaa"
+
+# Uploading happens here
+sepsis_file <- drive_put(media = "sepsis_data_temp.csv", 
+                         path = folder_url,
+                         name = "sepsis_data.csv")
+
+# Set the file permissions so anyone can download this file.
+sepsis_file %>% drive_share_anyone()
+```
+
+```{r}
+#| echo: false
+#| message: false
+
+drive_deauth()
+file_link <- "https://drive.google.com/file/d/1H7RV4btxh1oWtwFx0cCQLggv_CcqVY14/view"
+      
+## All data up until now
+new_data <- updateData(file_link)
+      
+## Include only most recent data
+most_recent_data <- new_data %>%
+  group_by(PatientID) %>%
+  filter(obsTime == max(obsTime))
+      
+sep_table <- most_recent_data %>%
+  filter(SepsisLabel == 1) %>%
+  select(c("PatientID",
+           "HR",
+           "Temp",
+           "Resp"))
+
+kable(sep_table)
+
+```
+
+-   Plots for all patients who have sepsis (if any) that show the complete history of their heart rate, temperature, and respiratory rate during their time in the ICU.
+
+```{r}
+#| echo: false
+#| message: false
+
+patients.plot <- ggplot(new_data, 
+                        aes(x = obsTime)) +
+  geom_line(aes(y = HR, 
+                color = "HR")) +
+  geom_line(aes(y = Temp, 
+                color = "Temp")) +
+  geom_line(aes(y = Resp, 
+                color = "Resp")) +
+  scale_color_manual(values = c("HR" = "red",
+                                "Temp" = "blue", 
+                                "Resp" = "green")) +
+  labs(x = "Time", y = "Response")
+
+# create a list of ggplot objects for each patient
+plot_list <- lapply(unique(new_data$PatientID), create_plot)
+
+# create the plotly object and add the slider
+ggplotly(plot_list[[1]]) %>%
+  layout(
+    sliders = list(
+      list(
+        active = 1,
+        currentvalue = list(prefix = "Patient ID: "),
+        pad = list(t = 20),
+        steps = lapply(1:length(plot_list), function(i) {
+          list(
+            label = unique(new_data$PatientID)[i],
+            method = "update",
+            args = list(
+              list(list(ggplotly(plot_list[[i]]))),
+              list(title = paste("Patient ID:", unique(new_data$PatientID)[i]))
+            )
+          )
+        })
+      )
+    )
+  )
+
+
+```
+
+-   A table showing the *change* in heart rate, temperature, and respiratory rate between the last two measurements for all patients
+
+```{r}
+#| echo: false
+#| message: false
+
+# Filter the data to keep only the last two measurements for each patient
+last2obs <- new_data %>% 
+  group_by(PatientID) %>% 
+  arrange(desc(obsTime)) %>%
+  slice_tail(n=2) 
+
+
+# Calculate the change in vitals between the last two measurements for each patient
+change_table <- last2obs %>% 
+  group_by(PatientID) %>% 
+  summarize("Change in Heart Rate" = last(HR) - first(HR),
+            "Change in Temperature" = last(Temp) - first(Temp),
+            "Change in Respiratory Rate" = last(Resp) - first(Resp))
+
+# Display the resulting table
+kable(change_table)
+
+```

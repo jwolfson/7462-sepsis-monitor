@@ -1,23 +1,55 @@
+---
+title: "Up-to-date ICU status reports"
+author: "Gretchen North"
+format: html
+editor: visual
+---
 
-# Task 1: Setup -----------------------------------------------------------
+## Background Information
 
-library(tidyverse)
-library(data.table) ## For the fread function
-library(lubridate)
+Up-to-date patient information for 50 randomly-sampled patients in the ICU. Comparative statistics for patient physiological measures including heart rate (HR), temperature (Temp), and respiratory rate (Resp).
 
-library(readr)
-library(knitr) # For table output in section 4
-library(purrr)
+### Report last updated:
 
-library(plotly)
-library(dplyr)
-library(ggplot2)
+```{r}
+#| echo: false
+time <- Sys.time()
+```
 
-source("sepsis_monitor_functions.R")
+`r time`
 
-  # Task 2 is stored in file speedread_tables.R 
-# Task 3: Google Drive upload ---------------------------------------------
-library(googledrive)
+## Physio Measures for Sampled Sepsis Patients
+
+-   A table listing the patients who currently have sepsis (if any), along with their most recent heart rate, temperature, and respiratory rate
+
+    -   Note: If table is empty, this indicates that no patients from the most recent, randomly-sampled dataset are currently affected by sepsis.
+
+```{r}
+#| echo: false
+#| message: false
+
+# Loading libraries, sourcing monitoring fns
+
+    library(tidyverse)
+    library(data.table) ## For the fread function
+    library(lubridate)
+    library(readr)
+    library(knitr) # For table output in section 4
+    library(purrr)
+    library(plotly)
+    library(dplyr)
+    library(ggplot2)
+    library(googledrive)
+
+
+    
+    source("sepsis_monitor_functions.R")
+
+```
+
+```{r}
+#| echo: false
+#| message: false
 
 df <- makeSepsisDataset()
 
@@ -33,27 +65,12 @@ sepsis_file <- drive_put(media = "sepsis_data_temp.csv",
 
 # Set the file permissions so anyone can download this file.
 sepsis_file %>% drive_share_anyone()
+```
 
+```{r}
+#| echo: false
+#| message: false
 
-
-
-
-
-
-
-
-
-
-
-
- 
-
-
-# Task 4: ICU Status Report -----------------------------------------------
-
-# up-to-date physio data
-      ## Calling drive_deauth() prevents R from trying to authenticate via a browser
-      ## This is needed to make the GitHub Action work
 drive_deauth()
 file_link <- "https://drive.google.com/file/d/1H7RV4btxh1oWtwFx0cCQLggv_CcqVY14/view"
       
@@ -64,8 +81,6 @@ new_data <- updateData(file_link)
 most_recent_data <- new_data %>%
   group_by(PatientID) %>%
   filter(obsTime == max(obsTime))
-
-time <- Sys.time()
       
 sep_table <- most_recent_data %>%
   filter(SepsisLabel == 1) %>%
@@ -76,6 +91,13 @@ sep_table <- most_recent_data %>%
 
 kable(sep_table)
 
+```
+
+-   Plots for all patients who have sepsis (if any) that show the complete history of their heart rate, temperature, and respiratory rate during their time in the ICU.
+
+```{r}
+#| echo: false
+#| message: false
 
 patients.plot <- ggplot(new_data, 
                         aes(x = obsTime)) +
@@ -90,10 +112,6 @@ patients.plot <- ggplot(new_data,
                                 "Resp" = "green")) +
   labs(x = "Time", y = "Response")
 
-patients.plot
-
-
-unique(new_data$PatientID)
 # create a list of ggplot objects for each patient
 plot_list <- lapply(unique(new_data$PatientID), create_plot)
 
@@ -120,40 +138,29 @@ ggplotly(plot_list[[1]]) %>%
   )
 
 
+```
 
+-   A table showing the *change* in heart rate, temperature, and respiratory rate between the last two measurements for all patients
 
-library(dplyr)
-library(googledrive)
-
-drive_auth()
-file_link <- "https://drive.google.com/file/d/1H7RV4btxh1oWtwFx0cCQLggv_CcqVY14/view"
-
-# Find the file by its path
-file <- drive_find(pattern = file_link)
-?drive_find
-# Read in the file as a data frame
-alldata <- read.csv(file$id)
-
-    # file_id <- drive_find(type = "file", pattern = file_link)$id
-    # 
-    # # Read the CSV file from Google Drive and store it in an object called "alldata"
-    # alldata <- drive_get(path = file_id)
+```{r}
+#| echo: false
+#| message: false
 
 # Filter the data to keep only the last two measurements for each patient
-last2obs <- alldata %>% 
+last2obs <- new_data %>% 
   group_by(PatientID) %>% 
-  arrange(desc(obsTime) )%>%
-  slice_tail(n=2)
-  
-  
-  # Calculate the change in vitals between the last two measurements for each patient
+  arrange(desc(obsTime)) %>%
+  slice_tail(n=2) 
+
+
+# Calculate the change in vitals between the last two measurements for each patient
 change_table <- last2obs %>% 
   group_by(PatientID) %>% 
   summarize("Change in Heart Rate" = last(HR) - first(HR),
             "Change in Temperature" = last(Temp) - first(Temp),
-            "Change in Respiration Rate" = last(Resp) - first(Resp))
+            "Change in Respiratory Rate" = last(Resp) - first(Resp))
 
 # Display the resulting table
 kable(change_table)
 
-  # Task 5 is housed in my git workflow .yml
+```
