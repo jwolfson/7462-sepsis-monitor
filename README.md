@@ -1,3 +1,3 @@
 # 7462-sepsis-monitor
 
-Source repository for PUBH 7462 Assignment 7. See Assignment instructions on Canvas.
+Task 2: Speed reading is in the Asg7.R file.
