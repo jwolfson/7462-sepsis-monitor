@@ -18,8 +18,7 @@ library(kableExtra)
 library(plotly)
 library(lubridate)
 library(knitr)
-library(googledrive)
-library(kableExtra)
+library(DT)
 source("sepsis_monitor_functions.R")
 ```
 
@@ -47,93 +46,56 @@ table %>% kable(caption = "Patients in ICU with Sepsis currently") %>% kable_sty
 
 ```
 ```{r}
-# identify patients who have sepsis
-septic_ids <- new_data %>%
+# subset to patients who have sepsis
+ids <- new_data %>%
   filter(SepsisLabel == 1) %>%
   select(PatientID) %>%
   unique() %>%
   .$PatientID
+
 # heart rate plot
 new_data %>%
-  filter(PatientID %in% septic_ids) %>%
+  filter(PatientID %in% ids) %>%
   ggplot() +
   geom_line(aes(x = ICULOS, y = HR, group = PatientID,
                 color = PatientID), alpha = .5) +
-  labs(x = "Hours in ICU",
+  labs(x = "Time (Hours) in ICU",
        y = "Heart Rate",
        color = "Patient ID",
-       title = "Heart Rate Over Time for Septic Patients")
+       title = "Heart Rate for Septic Patients")
 # respiratory rate plot
 new_data %>%
-  filter(PatientID %in% septic_ids) %>%
+  filter(PatientID %in% ids) %>%
   ggplot() +
   geom_line(aes(x = ICULOS, y = Resp, group = PatientID,
                 color = PatientID), alpha = .5) +
-  labs(x = "Hours in ICU",
+  labs(x = "Time (Hours) in ICU",
        y = "Respiratory Rate",
        color = "Patient ID",
-       title = "Respiratory Rate Over Time for Septic Patients")
+       title = "Respiratory Rate for Septic Patients")
 # temperature plot
 new_data %>%
-  filter(PatientID %in% septic_ids) %>%
+  filter(PatientID %in% ids) %>%
   ggplot() +
   geom_line(aes(x = ICULOS, y = Temp, group = PatientID,
                 color = PatientID), alpha = .5) +
-  labs(x = "Hours in ICU",
+  labs(x = "Time (Hours) in ICU",
        y = "Temperature",
        color = "Patient ID",
-       title = "Temperature Over Time for Septic Patients")
+       title = "Temperature for Septic Patients")
 ```
 
-```{r, warning=FALSE}
-# filter in patients who have sepsis
-SepsisPt <- new_data %>% filter(SepsisLabel == 1) %>% select(PatientID) %>% unique() 
-new_data %>% filter(PatientID %in% SepsisPt$PatientID) %>% ggplot(aes(x = ICULOS, y = HR)) +
-    geom_line(aes(group = PatientID),
-              alpha = 0.3) +
-    ggtitle("Heart Rate")
-new_data %>% filter(PatientID %in% SepsisPt$PatientID) %>% ggplot(aes(x = ICULOS, y = Temp)) +
-    geom_line(aes(group = PatientID),
-              alpha = 0.3) +
-    ggtitle("Temperature")
-new_data %>% filter(PatientID %in% SepsisPt$PatientID) %>% ggplot(aes(x = ICULOS, y = Resp)) +
-    geom_line(aes(group = PatientID),
-              alpha = 0.3) +
-    ggtitle("Respiratory Rate")
+```{r}
+vital_change <- new_data %>%
+  group_by(PatientID) %>%
+  arrange(desc(obsTime)) %>%
+  slice(1:2) %>%
+  summarise(`Difference in Heart Rate` = HR[1] - HR[2],
+            `Difference in Temperature` = Temp[1] - Temp[2],
+            `Difference in Respiratory Rate` = Resp[1] - Resp[2]) %>%
+  mutate_if(is.numeric, format, 3)
+datatable(vital_change)
 ```
-
-
-```{r, echo=FALSE, warning = FALSE}
-# time two hours ago
-time <- Sys.time() - 7300
-time <- force_tz(time, tzone = "UTC") + 18000 # Convert to UTC time zone
-# creating ranks for times
-new_data <- new_data %>% group_by(PatientID) %>% mutate(rank=dense_rank(desc(obsTime)))
-# subsetting data so that it's the last two measurements for each patient
-two.measures <- subset(new_data, new_data$rank == 1 |
-                      new_data$rank == 2) 
-# pivoting new and old data to long formate
-df.wide<-two.measures %>% pivot_wider(
-  id_cols = PatientID,
-  names_from = rank,
-  values_from = c(SepsisLabel, ICULOS, HR, Temp, Resp)
-)
-# subtracting columns 
-df.wide$HR.diff <- df.wide$HR_1 - df.wide$HR_2
-df.wide$Temp.diff <- df.wide$Temp_1 - df.wide$Temp_2
-df.wide$Resp.diff <- df.wide$Resp_1 - df.wide$Resp_2
-# selecting columns
-df.wide %>% 
-              mutate(HR.diff, color = ifelse(HR.diff > 0, "green","red")) %>% 
-              mutate(Temp.diff, color = ifelse(Temp.diff > 0, "green","red")) %>%               mutate(Resp.diff, color = ifelse(Resp.diff > 0, "green","red")) %>%
-              select(
-              "Patient ID" = PatientID,
-              "Difference in Heart Rate" = HR.diff,
-              "Difference in Temperature" = Temp.diff,
-              "Difference in Respiratory Rate" = Resp.diff) %>% 
-  kable(escape=FALSE, caption = "Change in Patients Physiological Measures over Previous Two Checks") %>% kable_styling(position = "left", full_width = FALSE) %>% column_spec(1, bold = TRUE, border_right = TRUE, color = "black", background = "lightgrey") %>% add_footnote("The time between the recent two checks on patients are not standardized, meaning that measures for some patients occurred closer in time than others.", notation="alphabet")
-```
-
 
 
 
