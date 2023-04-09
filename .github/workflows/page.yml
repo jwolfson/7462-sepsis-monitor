@@ -22,6 +22,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  hourly-job:
+    runs-on: ubuntu-latest
   # Single deploy job since we're just deploying
   deploy:
     environment:
@@ -29,6 +31,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+            token: ${{ secrets.GH_PAT }}
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup Pages
