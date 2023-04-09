@@ -43,7 +43,7 @@ jobs:
         uses: quarto-dev/quarto-actions/render@v2
         with:
           to: html
-          path: report.qmd
+          path: sepsis_monitoring_report.qmd
       - name: Setup git config
         run: |
           git config user.name "GitHub Actions Bot"
