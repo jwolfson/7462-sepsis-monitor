@@ -41,7 +41,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          token: ${{ secrets.Asg7 }}
+          token: ${{ secrets.GH_PAT }}
 
       - name: Render document
         uses: quarto-dev/quarto-actions/render@v2
