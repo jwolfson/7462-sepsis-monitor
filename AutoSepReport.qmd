@@ -79,7 +79,7 @@ kable(sep_table)
 #| echo: false
 #| message: false
 
-patients.plot <- ggplot(df, 
+patients.plot <- ggplot(new_data, 
                         aes(x = obsTime)) +
   geom_line(aes(y = HR, 
                 color = "HR")) +
