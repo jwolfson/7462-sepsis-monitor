@@ -23,7 +23,7 @@ time <- Sys.time()
 
 -   A table listing the patients who currently have sepsis (if any), along with their most recent heart rate, temperature, and respiratory rate
 
-    -   Note: If table is empty, this indicates that no patients from the most recent, randomly-sampled dataset are currently affected by sepsis.
+    -   Note: If the below table is empty, this indicates that no patients from the most recent, randomly-sampled dataset are currently affected by sepsis.
 
 ```{r}
 #| echo: false
@@ -42,30 +42,9 @@ time <- Sys.time()
     library(ggplot2)
     library(googledrive)
 
-
     
     source("sepsis_monitor_functions.R")
 
-```
-
-```{r}
-#| echo: false
-#| message: false
-
-df <- makeSepsisDataset()
-
-# We have to write the file to disk first, then upload it
-df %>% write_csv("sepsis_data_temp.csv")
-
-folder_url <- "https://drive.google.com/drive/folders/1pnGGhgb0V9wHHiOArN_OIcWEcRXUvTaa"
-
-# Uploading happens here
-sepsis_file <- drive_put(media = "sepsis_data_temp.csv", 
-                         path = folder_url,
-                         name = "sepsis_data.csv")
-
-# Set the file permissions so anyone can download this file.
-sepsis_file %>% drive_share_anyone()
 ```
 
 ```{r}
@@ -81,7 +60,7 @@ new_data <- updateData(file_link)
 ## Include only most recent data
 most_recent_data <- new_data %>%
   group_by(PatientID) %>%
-  filter(obsTime == max(obsTime))
+  filter(obsTime == max(obsTime, na.rm = TRUE))
       
 sep_table <- most_recent_data %>%
   filter(SepsisLabel == 1) %>%
@@ -100,7 +79,7 @@ kable(sep_table)
 #| echo: false
 #| message: false
 
-patients.plot <- ggplot(new_data, 
+patients.plot <- ggplot(df, 
                         aes(x = obsTime)) +
   geom_line(aes(y = HR, 
                 color = "HR")) +
@@ -111,35 +90,54 @@ patients.plot <- ggplot(new_data,
   scale_color_manual(values = c("HR" = "red",
                                 "Temp" = "blue", 
                                 "Resp" = "green")) +
-  labs(x = "Time", y = "Response")
+  labs(x = "Time", y = "Response") +
+  facet_wrap(~PatientID)
 
-# create a list of ggplot objects for each patient
-plot_list <- lapply(unique(new_data$PatientID), create_plot)
+patients.plot
 
-# create the plotly object and add the slider
-ggplotly(plot_list[[1]]) %>%
-  layout(
-    sliders = list(
-      list(
-        active = 1,
-        currentvalue = list(prefix = "Patient ID: "),
-        pad = list(t = 20),
-        steps = lapply(1:length(plot_list), function(i) {
-          list(
-            label = unique(new_data$PatientID)[i],
-            method = "update",
-            args = list(
-              list(list(ggplotly(plot_list[[i]]))),
-              list(title = paste("Patient ID:", unique(new_data$PatientID)[i]))
-            )
-          )
-        })
-      )
-    )
-  )
+
+# patients.plot <- ggplot(new_data, 
+#                         aes(x = obsTime)) +
+#   geom_line(aes(y = HR, 
+#                 color = "HR")) +
+#   geom_line(aes(y = Temp, 
+#                 color = "Temp")) +
+#   geom_line(aes(y = Resp, 
+#                 color = "Resp")) +
+#   scale_color_manual(values = c("HR" = "red",
+#                                 "Temp" = "blue", 
+#                                 "Resp" = "green")) +
+#   labs(x = "Time", y = "Response")
+# 
+# # create a list of ggplot objects for each patient
+# plot_list <- lapply(unique(new_data$PatientID), create_plot)
+# 
+# # create the plotly object and add the slider
+# ggplotly(plot_list[[1]]) %>%
+#   layout(
+#     sliders = list(
+#       list(
+#         active = 1,
+#         currentvalue = list(prefix = "Patient ID: "),
+#         pad = list(t = 20),
+#         steps = lapply(1:length(plot_list), function(i) {
+#           list(
+#             label = unique(new_data$PatientID)[i],
+#             method = "update",
+#             args = list(
+#               list(list(ggplotly(plot_list[[i]]))),
+#               list(title = paste("Patient ID:", unique(new_data$PatientID)[i]))
+#             )
+#           )
+#         })
+#       )
+#     )
+#   )
 
 
 ```
+
+## 
 
 -   A table showing the *change* in heart rate, temperature, and respiratory rate between the last two measurements for all patients
 
@@ -150,9 +148,8 @@ ggplotly(plot_list[[1]]) %>%
 # Filter the data to keep only the last two measurements for each patient
 last2obs <- new_data %>% 
   group_by(PatientID) %>% 
-  arrange(desc(obsTime)) %>%
+  arrange(obsTime) %>%
   slice_tail(n=2) 
-
 
 # Calculate the change in vitals between the last two measurements for each patient
 change_table <- last2obs %>% 

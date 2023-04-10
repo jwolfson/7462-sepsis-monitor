@@ -88,7 +88,8 @@ patients.plot <- ggplot(new_data,
   scale_color_manual(values = c("HR" = "red",
                                 "Temp" = "blue", 
                                 "Resp" = "green")) +
-  labs(x = "Time", y = "Response")
+  labs(x = "Time", y = "Response") +
+  facet_wrap(~PatientID)
 
 patients.plot
 
@@ -122,22 +123,36 @@ ggplotly(plot_list[[1]]) %>%
 
 
 
-library(dplyr)
-library(googledrive)
+# Create slider for patient selection
+library(plotly)
+library(shiny)
 
-drive_auth()
-file_link <- "https://drive.google.com/file/d/1H7RV4btxh1oWtwFx0cCQLggv_CcqVY14/view"
+?sliderInput
+slider <- sliderInput("patient_id", 
+                      "Patient ID:", 
+                      min = min(as.numeric(df$PatientID)), 
+                      max = max(as.numeric(df$PatientID)), 
+                      value = min(as.numeric(df$PatientID)), 
+                      step = 1)
 
-# Find the file by its path
-file <- drive_find(pattern = file_link)
-?drive_find
-# Read in the file as a data frame
-alldata <- read.csv(file$id)
+# Create plotly output
+plot_output <- plotlyOutput("patient_plot")
 
-    # file_id <- drive_find(type = "file", pattern = file_link)$id
-    # 
-    # # Read the CSV file from Google Drive and store it in an object called "alldata"
-    # alldata <- drive_get(path = file_id)
+# Define function to embed plotly graph in HTML file
+embed_plotly <- function(plotly_object, height = "100%") {
+  plotly_json <- plotly_json(plotly_object)
+  htmltools::tags$div(id = "plotly-div", 
+                      class = "plotly-graph-div", 
+                      style = sprintf("height: %s; width: 100%%;", height),
+                      htmltools::HTML(sprintf('<script type="text/javascript">Plotly.newPlot("plotly-div", %s, {}, {displaylogo: false});</script>', 
+                                              plotly_json)))
+}
+
+
+
+
+
+
 
 # Filter the data to keep only the last two measurements for each patient
 last2obs <- alldata %>% 
@@ -157,3 +172,6 @@ change_table <- last2obs %>%
 kable(change_table)
 
   # Task 5 is housed in my git workflow .yml
+
+
+## adding a bit of text so that I can test commit and push

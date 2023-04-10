@@ -13,27 +13,27 @@ getPatient <- function(idnum, read_function = "fread") {
                   na.strings = c("", "NA", "NaN"),
                   showProgress = FALSE) %>%
       tibble() %>%
-      select(ICULOS, HR, Temp, Resp, SepsisLabel) %>%
+      dplyr::select(ICULOS, HR, Temp, Resp, SepsisLabel) %>%
       mutate(across(-Temp, as.integer),
              Temp = as.numeric(Temp),
              PatientID = ptid_string) %>%
-      select(PatientID, everything())
+      dplyr::select(PatientID, everything())
   } else if (read_function == "read_delim") {
     data <- read_delim(url,
                        delim = "|",
                        na = c("", "NA", "NaN")) %>%
-      select(ICULOS, HR, Temp, Resp, SepsisLabel) %>%
+      dplyr::select(ICULOS, HR, Temp, Resp, SepsisLabel) %>%
       mutate(across(-Temp, as.integer),
              Temp = as.numeric(Temp),
              PatientID = ptid_string) %>%
-      select(PatientID, everything())
+      dplyr::select(PatientID, everything())
     
   }
   
   return(data)
 }
 
-makeSepsisDataset <- function(n = 50, read_fn = "fread") {
+makeSepsisDataset <- function(n = 1, read_fn = "fread") {
   ptids <- sample(1:10000, n, replace = FALSE)
 
   sepsis_data <- map_dfr(ptids, getPatient, read_function = read_fn) %>%
@@ -73,3 +73,9 @@ create_plot <- function(pid) {
   return(p)
 }
 
+
+
+
+  
+  
+  
