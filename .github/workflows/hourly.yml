@@ -49,10 +49,12 @@ jobs:
         with:
           to: html
           path: sepsis_monitoring_report.qmd
+          
       - name: Setup git config
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
+          
       - name: Commit
         run: |
           git add .
