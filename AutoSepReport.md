@@ -10,7 +10,7 @@ heart rate (HR), temperature (Temp), and respiratory rate (Resp).
 
 ### Report last updated:
 
-2023-04-12 00:30:35
+2023-04-12 01:59:03
 
 ## Physio Measures for Sampled Sepsis Patients
 
@@ -30,7 +30,7 @@ heart rate (HR), temperature (Temp), and respiratory rate (Resp).
 
 <!-- -->
 
-    Warning: Removed 1 row containing missing values (`geom_line()`).
+    Warning: Removed 2 rows containing missing values (`geom_line()`).
 
 ![](AutoSepReport_files/figure-commonmark/unnamed-chunk-4-1.png)
 
@@ -41,4 +41,4 @@ heart rate (HR), temperature (Temp), and respiratory rate (Resp).
 
 | PatientID | Change in Heart Rate | Change in Temperature | Change in Respiratory Rate |
 |:----------|---------------------:|----------------------:|---------------------------:|
-| 007181    |                   -3 |                    NA |                         -1 |
+| 007181    |                    4 |                    NA |                         -2 |
