@@ -1,0 +1,102 @@
+---
+title: "ICU status report"
+author: "Courtney Broedlow"
+format: html
+editor: visual
+execute: 
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#load libraries
+#| incldue: false
+library(tidyverse)
+library(googledrive)
+library(kableExtra)
+library(plotly)
+library(lubridate)
+library(knitr)
+library(DT)
+source("sepsis_monitor_functions.R")
+```
+
+```{r}
+#Getting data
+#| include: FALSE
+
+drive_deauth()
+file_link <- "https://drive.google.com/file/d/1DFD7NJlHlphFzfyppGnNRdGO0It48fZj"
+
+## All data up until now
+new_data <- updateData(file_link)
+
+## Include only most recent data
+most_recent_data <- new_data %>%
+  group_by(PatientID) %>%
+  filter(obsTime == max(obsTime))
+```
+
+## Report updated: `r Sys.time()` (CDT).
+
+```{r, echo = FALSE, warning = FALSE}
+table<-most_recent_data %>% subset(most_recent_data$SepsisLabel == 1) %>% select("Patient ID" = PatientID, "Heart Rate" = HR, "Temperature" = Temp, "Respiratory Rate" = Resp)
+table %>% kable(caption = "Patients in ICU with Sepsis currently") %>% kable_styling(full_width = TRUE)
+
+```
+```{r}
+# subset to patients who have sepsis
+ids <- new_data %>%
+  filter(SepsisLabel == 1) %>%
+  select(PatientID) %>%
+  unique() %>%
+  .$PatientID
+
+# heart rate plot
+new_data %>%
+  filter(PatientID %in% ids) %>%
+  ggplot() +
+  geom_line(aes(x = ICULOS, y = HR, group = PatientID,
+                color = PatientID), alpha = .5) +
+  labs(x = "Time (Hours) in ICU",
+       y = "Heart Rate",
+       color = "Patient ID",
+       title = "Heart Rate for Septic Patients")
+# respiratory rate plot
+new_data %>%
+  filter(PatientID %in% ids) %>%
+  ggplot() +
+  geom_line(aes(x = ICULOS, y = Resp, group = PatientID,
+                color = PatientID), alpha = .5) +
+  labs(x = "Time (Hours) in ICU",
+       y = "Respiratory Rate",
+       color = "Patient ID",
+       title = "Respiratory Rate for Septic Patients")
+# temperature plot
+new_data %>%
+  filter(PatientID %in% ids) %>%
+  ggplot() +
+  geom_line(aes(x = ICULOS, y = Temp, group = PatientID,
+                color = PatientID), alpha = .5) +
+  labs(x = "Time (Hours) in ICU",
+       y = "Temperature",
+       color = "Patient ID",
+       title = "Temperature for Septic Patients")
+```
+
+```{r}
+vital_change <- new_data %>%
+  group_by(PatientID) %>%
+  arrange(desc(obsTime)) %>%
+  slice(1:2) %>%
+  summarise(`Difference in Heart Rate` = HR[1] - HR[2],
+            `Difference in Temperature` = Temp[1] - Temp[2],
+            `Difference in Respiratory Rate` = Resp[1] - Resp[2]) %>%
+  mutate_if(is.numeric, format, 3)
+datatable(vital_change)
+```
+
+
+
+
