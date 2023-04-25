@@ -1,5 +1,4 @@
-Up-to-date ICU status reports
-================
+# Up-to-date ICU status reports
 Gretchen North
 
 ## Background Information
@@ -10,7 +9,7 @@ heart rate (HR), temperature (Temp), and respiratory rate (Resp).
 
 ### Report last updated:
 
-2023-04-25 15:05:17
+2023-04-25 16:08:30
 
 ## Physio Measures for Sampled Sepsis Patients
 
